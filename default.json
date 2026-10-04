@@ -35,6 +35,11 @@
       "schedule": ["* 19 * * *"],
       "addLabels": ["major"],
       "reviewers": ["JanWelker"]
+    },
+    {
+      "description": "Our own reusable workflows and presets: no release age to wait out.",
+      "matchPackageNames": ["JanWelker/renovate-config"],
+      "minimumReleaseAge": "0 days"
     }
   ]
 }

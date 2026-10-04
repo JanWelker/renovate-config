@@ -22,7 +22,8 @@ repositories. A repository opts in with:
 
 ## What a repository needs besides this preset
 
-- A `ci-ok` job that runs on every pull request and fails when any other check
+- A `ci-ok` job calling `wait-for-checks.yaml` from this repository, pinned to a
+  tag, which runs on every pull request and fails when any other check
   on the head commit fails, required by a ruleset on the default branch.
   Without a required check, GitHub's auto-merge merges a red PR.
 - Dependabot alerts on, Dependabot security updates off: Renovate reads the
