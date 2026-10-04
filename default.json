@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Shared update policy for JanWelker's repositories. See README.md.",
+  "extends": [
+    "config:best-practices",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":timezone(Europe/Zurich)",
+    ":prHourlyLimitNone",
+    ":prConcurrentLimitNone"
+  ],
+  "labels": ["dependencies"],
+  "minimumReleaseAge": "3 days",
+  "separateMultipleMajor": true,
+  "platformAutomerge": true,
+  "automergeStrategy": "squash",
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  },
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "description": "Everything below a major merges on its own once the required ci-ok check is green.",
+      "matchUpdateTypes": ["patch", "minor", "digest", "pin", "pinDigest", "lockFileMaintenance"],
+      "automerge": true
+    },
+    {
+      "description": "A major opens at 19:00 Zurich time and waits for a human to merge it.",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "schedule": ["* 19 * * *"],
+      "addLabels": ["major"],
+      "reviewers": ["JanWelker"]
+    }
+  ]
+}
