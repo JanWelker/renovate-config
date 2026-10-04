@@ -18,6 +18,7 @@ repositories. A repository opts in with:
 | Patch, minor, digest, lock file | `automerge: true` | Merges once the required `ci-ok` check is green |
 | Major | `automerge: false`, opened at 19:00 Europe/Zurich, review requested | A major is where a migration hides; merging it is the approval |
 | Security fixes | Renovate's `vulnerabilityAlerts` defaults | Ignore the schedule, the release age and the PR limits, so they open at any time |
+| TypeScript | `allowedVersions: <7` | 7 is the native port; the toolchains here are not ready for it |
 | One PR per concern | Renovate's default branching, `separateMultipleMajor` | Group only what must move together, in the repository's own config |
 
 ## What a repository needs besides this preset
