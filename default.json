@@ -35,6 +35,16 @@
       "schedule": ["* 19 * * *"],
       "addLabels": ["major"],
       "reviewers": ["JanWelker"]
+    },
+    {
+      "description": "Our own reusable workflows and presets: no release age to wait out.",
+      "matchPackageNames": ["JanWelker/renovate-config"],
+      "minimumReleaseAge": "0 days"
+    },
+    {
+      "description": "TypeScript stays on 6.x everywhere: 7 is the native Go port, and the Svelte and typescript-eslint toolchains do not support it yet.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
     }
   ]
 }

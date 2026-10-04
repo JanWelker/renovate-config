@@ -18,11 +18,13 @@ repositories. A repository opts in with:
 | Patch, minor, digest, lock file | `automerge: true` | Merges once the required `ci-ok` check is green |
 | Major | `automerge: false`, opened at 19:00 Europe/Zurich, review requested | A major is where a migration hides; merging it is the approval |
 | Security fixes | Renovate's `vulnerabilityAlerts` defaults | Ignore the schedule, the release age and the PR limits, so they open at any time |
+| TypeScript | `allowedVersions: <7` | 7 is the native port; the toolchains here are not ready for it |
 | One PR per concern | Renovate's default branching, `separateMultipleMajor` | Group only what must move together, in the repository's own config |
 
 ## What a repository needs besides this preset
 
-- A `ci-ok` job that runs on every pull request and fails when any other check
+- A `ci-ok` job calling `wait-for-checks.yaml` from this repository, pinned to a
+  tag, which runs on every pull request and fails when any other check
   on the head commit fails, required by a ruleset on the default branch.
   Without a required check, GitHub's auto-merge merges a red PR.
 - Dependabot alerts on, Dependabot security updates off: Renovate reads the
