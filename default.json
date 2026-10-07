@@ -37,6 +37,12 @@
       "reviewers": ["JanWelker"]
     },
     {
+      "description": "These registries publish no release timestamps, so a required timestamp would hold their updates forever; they skip the release age instead.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/**", "*.ecr.aws/**", "ecr-public.aws.com/**", "registry.k8s.io/**"],
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
+    {
       "description": "Our own reusable workflows and presets: no release age to wait out.",
       "matchPackageNames": ["JanWelker/renovate-config"],
       "minimumReleaseAge": "0 days"

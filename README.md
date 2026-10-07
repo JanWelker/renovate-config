@@ -15,6 +15,7 @@ repositories. A repository opts in with:
 | Rule | Setting | Why |
 | --- | --- | --- |
 | Release age | `minimumReleaseAge: 3 days` | Long enough for an upstream to pull a broken or compromised release |
+| Release age without timestamps | `timestamp-optional` for `ghcr.io`, ECR Public and `registry.k8s.io` | These registries report no release date, so the age could never be met and the update would wait forever |
 | Patch, minor, digest, lock file | `automerge: true` | Merges once the required `ci-ok` check is green |
 | Major | `automerge: false`, opened at 19:00 Europe/Zurich, review requested | A major is where a migration hides; merging it is the approval |
 | Security fixes | Renovate's `vulnerabilityAlerts` defaults | Ignore the schedule, the release age and the PR limits, so they open at any time |
