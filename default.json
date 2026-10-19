@@ -19,6 +19,9 @@
     "enabled": true,
     "labels": ["security"]
   },
+  "constraints": {
+    "npm": "<12"
+  },
   "lockFileMaintenance": {
     "enabled": true
   },
