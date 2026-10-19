@@ -19,6 +19,7 @@ repositories. A repository opts in with:
 | Patch, minor, digest, lock file | `automerge: true` | Merges once the required `ci-ok` check is green |
 | Major | `automerge: false`, opened at 19:00 Europe/Zurich, review requested | A major is where a migration hides; merging it is the approval |
 | Security fixes | Renovate's `vulnerabilityAlerts` defaults | Ignore the schedule, the release age and the PR limits, so they open at any time |
+| npm for lock files | `constraints: { npm: "<12" }` | npm 12's `allow-remote` default refuses registry tarballs while regenerating `package-lock.json` (`EALLOWREMOTE`); lift once npm fixes it ([npm/cli#9347](https://github.com/npm/cli/issues/9347)) |
 | TypeScript | `allowedVersions: <7` | 7 is the native port; the toolchains here are not ready for it |
 | One PR per concern | Renovate's default branching, `separateMultipleMajor` | Group only what must move together, in the repository's own config |
 
