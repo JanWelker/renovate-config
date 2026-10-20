@@ -40,10 +40,10 @@
       "reviewers": ["JanWelker"]
     },
     {
-      "description": "These registries publish no release timestamps, so a required timestamp would hold their updates forever; they skip the release age instead.",
+      "description": "These registries publish no release timestamps, so a required timestamp would hold their updates forever; they skip the release age altogether, which also keeps the dashboard free of the timestamp-optional warnings.",
       "matchDatasources": ["docker"],
-      "matchPackageNames": ["ghcr.io/**", "*.ecr.aws/**", "ecr-public.aws.com/**", "registry.k8s.io/**"],
-      "minimumReleaseAgeBehaviour": "timestamp-optional"
+      "matchPackageNames": ["ghcr.io/**", "gcr.io/**", "*.ecr.aws/**", "ecr-public.aws.com/**", "registry.k8s.io/**"],
+      "minimumReleaseAge": null
     },
     {
       "description": "Our own reusable workflows and presets: no release age to wait out.",
