@@ -28,7 +28,9 @@ repositories. A repository opts in with:
 - A `ci-ok` job calling `wait-for-checks.yaml` from this repository, pinned to a
   tag, which runs on every pull request and fails when any other check
   on the head commit fails, required by a ruleset on the default branch.
-  Without a required check, GitHub's auto-merge merges a red PR.
+  Without a required check, GitHub's auto-merge merges a red PR. A
+  repository on self-hosted runners passes their label as `runs-on`; the
+  wait needs only `curl` and `jq`.
 - Dependabot alerts on, Dependabot security updates off: Renovate reads the
   alerts and opens the fix PRs itself.
 - A private repository on GitHub Free has no rulesets, so it sets
