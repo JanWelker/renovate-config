@@ -7,10 +7,17 @@
 # re-running a failed check. A caller may also run on workflow_dispatch
 # against a branch, for pull requests opened with GITHUB_TOKEN (release-please),
 # which start no pull_request workflows; the head commit is then github.sha.
+# The step needs only curl and jq, so it also runs on a minimal self-hosted
+# runner image, which has no gh.
 name: Wait for checks
 
 "on":
   workflow_call:
+    inputs:
+      runs-on:
+        description: The runner label the wait runs on.
+        type: string
+        default: ubuntu-latest
 
 permissions:
   checks: read
@@ -18,7 +25,7 @@ permissions:
 jobs:
   wait:
     name: wait
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     timeout-minutes: 90
     steps:
       - name: Wait for every other check on the head commit
@@ -27,12 +34,26 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
+          api() {
+            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" "$GITHUB_API_URL/$1"
+          }
+          # Every check run on the commit, one page of 100 at a time.
+          check_runs() {
+            local page=1 body
+            while :; do
+              body=$(api "repos/$REPO/commits/$SHA/check-runs?per_page=100&page=$page")
+              jq -r '.check_runs[] | select(.name | startswith("ci-ok") | not) | "\(.id)\t\(.status)\t\(.conclusion // "-")\t\(.name)"' <<<"$body"
+              [ "$(jq '.check_runs | length' <<<"$body")" -lt 100 ] && return
+              page=$((page + 1))
+            done
+          }
           # Give the workflows started by the same event time to register.
           sleep 30
           settled=0
           while :; do
-            runs=$(gh api --paginate "repos/$REPO/commits/$SHA/check-runs?per_page=100" \
-              --jq '.check_runs[] | select(.name | startswith("ci-ok") | not) | "\(.id)\t\(.status)\t\(.conclusion // "-")\t\(.name)"')
+            runs=$(check_runs)
             failed=0
             pending=0
             while IFS=$'\t' read -r id status conclusion name; do
@@ -47,7 +68,7 @@ jobs:
                   failed=1
                   ;;
                 cancelled)
-                  if gh api "repos/$REPO/check-runs/$id/annotations" --jq '.[].message' |
+                  if api "repos/$REPO/check-runs/$id/annotations" | jq -r '.[].message' |
                     grep -q 'higher priority waiting request'; then
                     echo "  replaced by a newer job in its concurrency group; skipped"
                   else
