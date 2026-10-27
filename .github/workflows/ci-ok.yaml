@@ -10,6 +10,7 @@ name: CI OK
 
 permissions:
   checks: read
+  statuses: read
 
 concurrency:
   group: ci-ok-${{ github.event.pull_request.number || github.ref }}
@@ -18,3 +19,5 @@ concurrency:
 jobs:
   ci-ok:
     uses: ./.github/workflows/wait-for-checks.yaml
+    with:
+      required: validate

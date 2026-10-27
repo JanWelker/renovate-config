@@ -1,14 +1,20 @@
 ---
 # The logic behind every repository's ci-ok check. A caller runs it on
-# pull_request; it waits for every other check on the head commit and fails
-# if one did not pass. A job GitHub cancelled because a newer job queued for
-# the same concurrency group (a gh-pages deploy, say) is not a verdict on the
-# commit and is skipped; any other cancellation fails. Re-run the caller after
-# re-running a failed check. A caller may also run on workflow_dispatch
-# against a branch, for pull requests opened with GITHUB_TOKEN (release-please),
-# which start no pull_request workflows; the head commit is then github.sha.
-# The step needs only curl and jq, so it also runs on a minimal self-hosted
-# runner image, which has no gh.
+# pull_request; it waits for every other check run and commit status on the
+# head commit and fails if one did not pass, if nothing else reported at all,
+# or if something is still pending at the deadline. It passes only after
+# settle-seconds have gone by and the last poll found nothing pending and
+# nothing new. `success`, `skipped` and `neutral` pass (CodeQL reports
+# neutral); `stale` fails. A job GitHub cancelled because a newer job queued
+# for the same concurrency group (a gh-pages deploy, say) is not a verdict on
+# the commit and is skipped; any other cancellation fails. Every name in
+# `required` must appear and succeed. Re-run the caller after re-running a
+# failed check. A caller may also run on workflow_dispatch against a branch,
+# for pull requests opened with GITHUB_TOKEN (release-please), which start no
+# pull_request workflows; the head commit is then github.sha. Commit statuses
+# need `statuses: read` in the caller; without it the step warns and reads
+# check runs only. The step needs only curl and jq, so it also runs on a
+# minimal self-hosted runner image, which has no gh.
 name: Wait for checks
 
 "on":
@@ -18,9 +24,21 @@ name: Wait for checks
         description: The runner label the wait runs on.
         type: string
         default: ubuntu-latest
+      required:
+        description: Check run names or commit status contexts, one per line, that must appear on the head commit and succeed.
+        type: string
+        default: ""
+      settle-seconds:
+        description: The shortest time to watch the head commit before passing.
+        type: number
+        default: 120
+      deadline-minutes:
+        description: Fail if anything is still pending, a required check is missing, or nothing else reported by then.
+        type: number
+        default: 80
 
-permissions:
-  checks: read
+# No permissions block: a called workflow cannot ask for more than its caller
+# grants, so the caller's block (checks: read, statuses: read) decides.
 
 jobs:
   wait:
@@ -33,56 +51,113 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REQUIRED: ${{ inputs.required }}
+          SETTLE_SECONDS: ${{ inputs.settle-seconds }}
+          DEADLINE_MINUTES: ${{ inputs.deadline-minutes }}
         run: |
           api() {
             curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" "$GITHUB_API_URL/$1"
           }
-          # Every check run on the commit, one page of 100 at a time.
+          # The latest check run per name, one page of 100 at a time, as
+          # id, kind, state, name.
           check_runs() {
             local page=1 body
             while :; do
-              body=$(api "repos/$REPO/commits/$SHA/check-runs?per_page=100&page=$page")
-              jq -r '.check_runs[] | select(.name | startswith("ci-ok") | not) | "\(.id)\t\(.status)\t\(.conclusion // "-")\t\(.name)"' <<<"$body"
+              body=$(api "repos/$REPO/commits/$SHA/check-runs?filter=latest&per_page=100&page=$page")
+              jq -r '.check_runs[] | select(.name | startswith("ci-ok") | not) |
+                "\(.id)\trun\t\(if .status == "completed" then .conclusion else "pending" end)\t\(.name)"' <<<"$body"
               [ "$(jq '.check_runs | length' <<<"$body")" -lt 100 ] && return
               page=$((page + 1))
             done
           }
-          # Give the workflows started by the same event time to register.
-          sleep 30
-          settled=0
+          # The latest commit status per context, in the same shape.
+          statuses_readable=1
+          statuses() {
+            local page=1 body
+            [ "$statuses_readable" = 1 ] || return 0
+            while :; do
+              if ! body=$(api "repos/$REPO/commits/$SHA/status?per_page=100&page=$page"); then
+                echo "::warning::Cannot read commit statuses; grant statuses: read in the calling workflow" >&2
+                statuses_readable=0
+                return 0
+              fi
+              jq -r '.statuses[] | "-\tstatus\t\(.state)\t\(.context)"' <<<"$body"
+              [ "$(jq '.statuses | length' <<<"$body")" -lt 100 ] && return
+              page=$((page + 1))
+            done
+          }
+          required=()
+          while IFS= read -r line; do
+            line=$(echo "$line" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+            [ -n "$line" ] && required+=("$line")
+          done <<<"$REQUIRED"
+          status_file=$(mktemp)
+          start=$(date +%s)
+          deadline=$((start + DEADLINE_MINUTES * 60))
+          previous=-1
           while :; do
-            runs=$(check_runs)
+            sleep 20
+            # statuses runs in this shell, so a missing permission warns once.
+            statuses >"$status_file"
+            runs=$(check_runs; cat "$status_file")
             failed=0
             pending=0
-            while IFS=$'\t' read -r id status conclusion name; do
-              [ -z "$id" ] && continue
-              echo "$status $conclusion $name"
-              if [ "$status" != completed ]; then
-                pending=1
-                continue
-              fi
-              case "$conclusion" in
-                failure | timed_out | action_required | startup_failure)
-                  failed=1
-                  ;;
+            seen=0
+            echo "--- $(($(date +%s) - start))s"
+            while IFS=$'\t' read -r id kind state name; do
+              [ -z "$kind" ] && continue
+              seen=$((seen + 1))
+              echo "$kind $state $name"
+              case "$state" in
+                success | skipped | neutral) ;;
+                pending | queued | in_progress | waiting | requested) pending=1 ;;
                 cancelled)
-                  if api "repos/$REPO/check-runs/$id/annotations" | jq -r '.[].message' |
+                  if [ "$kind" = run ] &&
+                    api "repos/$REPO/check-runs/$id/annotations" | jq -r '.[].message' |
                     grep -q 'higher priority waiting request'; then
                     echo "  replaced by a newer job in its concurrency group; skipped"
                   else
                     failed=1
                   fi
                   ;;
+                # failure, error, timed_out, action_required, startup_failure,
+                # stale and anything GitHub adds later.
+                *) failed=1 ;;
               esac
             done <<<"$runs"
             if [ "$failed" = 1 ]; then
               echo "::error::A check on $SHA did not pass"
               exit 1
             fi
-            if [ "$pending" = 1 ]; then settled=0; else settled=$((settled + 1)); fi
-            # Two quiet polls in a row: nothing is pending and nothing new appeared.
-            [ "$settled" -ge 2 ] && exit 0
-            sleep 20
+            missing=()
+            for name in "${required[@]}"; do
+              state=$(awk -F'\t' -v n="$name" '$4 == n { print $3; exit }' <<<"$runs")
+              case "$state" in
+                success) ;;
+                "" | pending | queued | in_progress | waiting | requested) missing+=("$name") ;;
+                *)
+                  echo "::error::Required check $name ended $state"
+                  exit 1
+                  ;;
+              esac
+            done
+            now=$(date +%s)
+            if [ "$pending" = 0 ] && [ "${#missing[@]}" = 0 ] && [ "$seen" -gt 0 ] &&
+              [ "$seen" = "$previous" ] && [ $((now - start)) -ge "$SETTLE_SECONDS" ]; then
+              echo "All $seen checks on $SHA passed"
+              exit 0
+            fi
+            if [ "$now" -ge "$deadline" ]; then
+              if [ "$seen" = 0 ]; then
+                echo "::error::No other check reported on $SHA; ci-ok passes only on a commit something else has checked"
+              elif [ "${#missing[@]}" -gt 0 ]; then
+                echo "::error::Required checks missing or unfinished: ${missing[*]}"
+              else
+                echo "::error::Checks still pending on $SHA at the deadline"
+              fi
+              exit 1
+            fi
+            previous=$seen
           done
