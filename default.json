@@ -13,6 +13,7 @@
   "minimumReleaseAge": "3 days",
   "separateMultipleMajor": true,
   "platformAutomerge": true,
+  "prCreation": "not-pending",
   "automergeStrategy": "squash",
   "osvVulnerabilityAlerts": true,
   "vulnerabilityAlerts": {
@@ -23,12 +24,17 @@
     "npm": "<12"
   },
   "lockFileMaintenance": {
-    "enabled": true
+    "description": "Refreshes every transitive package at once and has no release timestamp to age, so it opens on Mondays, a whole-day window Renovate cannot miss, and waits for a human.",
+    "enabled": true,
+    "schedule": ["* * * * 1"],
+    "minimumReleaseAge": "0 days",
+    "automerge": false,
+    "reviewers": ["JanWelker"]
   },
   "packageRules": [
     {
       "description": "Everything below a major merges on its own once the required ci-ok check is green.",
-      "matchUpdateTypes": ["patch", "minor", "digest", "pin", "pinDigest", "lockFileMaintenance"],
+      "matchUpdateTypes": ["patch", "minor", "digest", "pin", "pinDigest"],
       "automerge": true
     },
     {
@@ -40,9 +46,23 @@
       "reviewers": ["JanWelker"]
     },
     {
-      "description": "These registries publish no release timestamps, so a required timestamp would hold their updates forever; they skip the release age altogether, which also keeps the dashboard free of the timestamp-optional warnings.",
+      "description": "Below 1.0 a minor is the breaking release, so it waits for a human like a major.",
+      "matchCurrentVersion": "<1.0.0",
+      "matchUpdateTypes": ["minor"],
+      "automerge": false,
+      "reviewers": ["JanWelker"]
+    },
+    {
+      "description": "These registries publish no release timestamps, so a required timestamp would hold their updates forever and no age can be enforced; they skip the release age altogether, which also keeps the dashboard free of the timestamp-optional warnings, and third-party images there wait for a human instead.",
       "matchDatasources": ["docker"],
-      "matchPackageNames": ["ghcr.io/**", "gcr.io/**", "*.ecr.aws/**", "ecr-public.aws.com/**", "registry.k8s.io/**"],
+      "matchPackageNames": ["ghcr.io/**", "gcr.io/**", "*.ecr.aws/**", "ecr-public.aws.com/**", "registry.k8s.io/**", "!ghcr.io/janwelker/**"],
+      "minimumReleaseAge": null,
+      "automerge": false
+    },
+    {
+      "description": "Our own images: no release age to wait out.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/janwelker/**"],
       "minimumReleaseAge": null
     },
     {
