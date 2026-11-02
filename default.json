@@ -14,6 +14,7 @@
   "separateMultipleMajor": true,
   "platformAutomerge": true,
   "prCreation": "not-pending",
+  "internalChecksAsSuccess": true,
   "automergeStrategy": "squash",
   "osvVulnerabilityAlerts": true,
   "vulnerabilityAlerts": {
@@ -28,6 +29,7 @@
     "enabled": true,
     "schedule": ["* * * * 1"],
     "minimumReleaseAge": "0 days",
+    "prCreation": "immediate",
     "automerge": false,
     "reviewers": ["JanWelker"]
   },
