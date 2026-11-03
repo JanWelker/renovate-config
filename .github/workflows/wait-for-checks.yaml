@@ -5,9 +5,11 @@
 # or if something is still pending at the deadline. It passes only after
 # settle-seconds have gone by and the last poll found nothing pending and
 # nothing new. `success`, `skipped` and `neutral` pass (CodeQL reports
-# neutral); `stale` fails. A job GitHub cancelled because a newer job queued
-# for the same concurrency group (a gh-pages deploy, say) is not a verdict on
-# the commit and is skipped; any other cancellation fails. Every name in
+# neutral); `stale` fails. A cancelled check run is not a verdict on the
+# commit, and is skipped, when a newer run of the same name exists on it
+# (a cancel-in-progress concurrency group, two events for one push) or when
+# GitHub cancelled it because a newer job queued for the same group (a
+# gh-pages deploy, say); any other cancellation fails. Every name in
 # `required` must appear and succeed. Re-run the caller after re-running a
 # failed check. A caller may also run on workflow_dispatch against a branch,
 # for pull requests opened with GITHUB_TOKEN (release-please), which start no
@@ -105,6 +107,13 @@ jobs:
             failed=0
             pending=0
             seen=0
+            # The highest check run id per name: ids only grow, so a lower
+            # one is an older run of the same check.
+            declare -A newest=()
+            while IFS=$'\t' read -r id kind state name; do
+              [ "$kind" = run ] || continue
+              [ "${newest[$name]:-0}" -ge "$id" ] || newest[$name]=$id
+            done <<<"$runs"
             echo "--- $(($(date +%s) - start))s"
             while IFS=$'\t' read -r id kind state name; do
               [ -z "$kind" ] && continue
@@ -114,7 +123,9 @@ jobs:
                 success | skipped | neutral) ;;
                 pending | queued | in_progress | waiting | requested) pending=1 ;;
                 cancelled)
-                  if [ "$kind" = run ] &&
+                  if [ "$kind" = run ] && [ "$id" -lt "${newest[$name]}" ]; then
+                    echo "  superseded by a newer run of the same check; skipped"
+                  elif [ "$kind" = run ] &&
                     api "repos/$REPO/check-runs/$id/annotations" | jq -r '.[].message' |
                     grep -q 'higher priority waiting request'; then
                     echo "  replaced by a newer job in its concurrency group; skipped"
