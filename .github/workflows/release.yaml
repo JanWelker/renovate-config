@@ -1,0 +1,56 @@
+---
+# Tags a release on every merge to main that carries one: a breaking change
+# (`type!:` or a `BREAKING CHANGE:` footer) bumps the major, `feat` the minor,
+# `fix`, `perf` and `revert` the patch; `chore`, `docs`, `ci` and the rest
+# release nothing. Callers pin wait-for-checks.yaml to a tag, so a fix that
+# is not tagged never reaches them. Release notes are GitHub's own.
+name: Release
+
+"on":
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Tag the next version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo v0.0.0)
+          bump="none"
+          while IFS= read -r sha; do
+            subject=$(git log -1 --format=%s "$sha")
+            body=$(git log -1 --format=%b "$sha")
+            if [[ "$subject" =~ ^[a-z]+(\([^\)]*\))?!: ]] || grep -q '^BREAKING CHANGE:' <<<"$body"; then
+              bump="major"
+            elif [[ "$subject" =~ ^feat(\([^\)]*\))?: ]]; then
+              [ "$bump" = major ] || bump="minor"
+            elif [[ "$subject" =~ ^(fix|perf|revert)(\([^\)]*\))?: ]]; then
+              [ "$bump" != none ] || bump="patch"
+            fi
+          done < <(git rev-list "$last..HEAD")
+          IFS=. read -r major minor patch <<<"${last#v}"
+          case "$bump" in
+            major) next="v$((major + 1)).0.0" ;;
+            minor) next="v$major.$((minor + 1)).0" ;;
+            patch) next="v$major.$minor.$((patch + 1))" ;;
+            none) echo "Nothing to release since $last"; exit 0 ;;
+          esac
+          echo "$last -> $next ($bump)"
+          gh release create "$next" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --generate-notes
