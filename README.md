@@ -46,6 +46,11 @@ included.
 | `settle-seconds` | `120` | Shortest watch before passing |
 | `deadline-minutes` | `80` | Longest wait; the job times out at 90 |
 
+Every merge to `main` with a `feat`, `fix`, `perf`, `revert` or breaking
+commit tags the next version through
+[`release.yaml`](.github/workflows/release.yaml), so a fix reaches the callers
+with Renovate's next pin bump; `chore`, `docs` and `ci` release nothing.
+
 A red `ci-ok` on Renovate PRs across repositories after a new tag is the sign
 the check got too strict; its log names the check it waited for. Re-run
 `ci-ok` after re-running a failed check.
