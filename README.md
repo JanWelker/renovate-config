@@ -18,7 +18,8 @@ repositories. A repository opts in with:
 | PR creation | `prCreation: not-pending` | The PR opens only once `renovate/stability-days` passed; GitHub's auto-merge only watches `ci-ok`, so a digest PR opened earlier merged before its age |
 | Renovate's own checks | `internalChecksAsSuccess: true` | CI runs only on the PR, so a passed `renovate/stability-days` is the branch's only status; without this Renovate calls it pending and holds the PR another 25 hours (`prNotPendingHours`) |
 | Release age without timestamps | No release age and `automerge: false` for third-party images on `ghcr.io`, `gcr.io`, ECR Public and `registry.k8s.io` | These registries report no release date, so the age could never be met and the update would wait forever; a human stands in for the age, and skipping it instead of `timestamp-optional` keeps the dashboard free of its warnings |
-| Own images | No release age for `ghcr.io/janwelker/**` | Nothing to wait out on our own releases |
+| Trusted publishers' digests | `automerge: true` for digest updates from the publishers listed in `default.json` | A digest is a rebuild of a tag already accepted; waiting for a human left base-image security rebuilds open for weeks. New tags from them still wait |
+| Own images | No release age for `ghcr.io/janwelker/**` and `ghcr.io/somuch-cloud/**` | Nothing to wait out on our own releases |
 | Patch, minor, digest | `automerge: true` | Merges once the required `ci-ok` check is green |
 | Major, and a minor below 1.0 | `automerge: false`, review requested; a major opens at 19:00 Europe/Zurich | A major is where a migration hides, and below 1.0 the minor is the breaking release; merging it is the approval |
 | Lock file maintenance | Mondays, `prCreation: immediate`, `automerge: false`, review requested | It moves every transitive package at once with no timestamp to age |
