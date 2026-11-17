@@ -25,13 +25,12 @@
     "npm": "<12"
   },
   "lockFileMaintenance": {
-    "description": "Refreshes every transitive package at once and has no release timestamp to age, so it opens on Mondays, a whole-day window Renovate cannot miss, and waits for a human.",
+    "description": "Refreshes every transitive package at once and has no release timestamp to age, so it opens on Mondays, a whole-day window Renovate cannot miss, and merges on green ci-ok like any patch.",
     "enabled": true,
     "schedule": ["* * * * 1"],
     "minimumReleaseAge": "0 days",
     "prCreation": "immediate",
-    "automerge": false,
-    "reviewers": ["JanWelker"]
+    "automerge": true
   },
   "packageRules": [
     {
