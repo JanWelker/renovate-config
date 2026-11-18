@@ -80,10 +80,11 @@
       "automerge": true
     },
     {
-      "description": "Our own images: no release age to wait out.",
+      "description": "Our own images: no release age to wait out, so no renovate/stability-days status either. With CI on the PR only, the branch then has no status at all, and not-pending would hold the PR for prNotPendingHours, restarted by every new release; open it at once and let ci-ok gate the merge.",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["ghcr.io/janwelker/**", "ghcr.io/somuch-cloud/**"],
-      "minimumReleaseAge": null
+      "minimumReleaseAge": null,
+      "prCreation": "immediate"
     },
     {
       "description": "Our own reusable workflows and presets: no release age to wait out.",
