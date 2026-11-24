@@ -54,10 +54,11 @@
       "reviewers": ["JanWelker"]
     },
     {
-      "description": "These registries publish no release timestamps, so a required timestamp would hold their updates forever and no age can be enforced; they skip the release age altogether, which also keeps the dashboard free of the timestamp-optional warnings, and third-party images there wait for a human instead.",
+      "description": "These registries publish no release timestamps, so a required timestamp would hold their updates forever and no age can be enforced; they skip the release age altogether, which also keeps the dashboard free of the timestamp-optional warnings, and third-party images there wait for a human instead. Without an age there is no renovate/stability-days status, so not-pending would hold the PR for prNotPendingHours, restarted by every rebase; open it at once.",
       "matchDatasources": ["docker"],
-      "matchPackageNames": ["ghcr.io/**", "gcr.io/**", "*.ecr.aws/**", "ecr-public.aws.com/**", "registry.k8s.io/**", "!ghcr.io/janwelker/**", "!ghcr.io/somuch-cloud/**"],
+      "matchPackageNames": ["ghcr.io/**", "gcr.io/**", "quay.io/**", "*.ecr.aws/**", "ecr-public.aws.com/**", "registry.k8s.io/**", "!ghcr.io/janwelker/**", "!ghcr.io/somuch-cloud/**"],
       "minimumReleaseAge": null,
+      "prCreation": "immediate",
       "automerge": false
     },
     {
