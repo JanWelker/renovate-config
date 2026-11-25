@@ -25,7 +25,7 @@
     "npm": "<12"
   },
   "lockFileMaintenance": {
-    "description": "Refreshes every transitive package at once and has no release timestamp to age, so it opens on Mondays, a whole-day window Renovate cannot miss, and merges on green ci-ok like any patch.",
+    "description": "Refreshes every transitive package at once and has no release timestamp to age, so it opens on Mondays, a whole-day window Renovate cannot miss, and merges on green required checks like any patch.",
     "enabled": true,
     "schedule": ["* * * * 1"],
     "minimumReleaseAge": "0 days",
@@ -34,7 +34,7 @@
   },
   "packageRules": [
     {
-      "description": "Everything below a major merges on its own once the required ci-ok check is green.",
+      "description": "Everything below a major merges on its own once the required checks are green.",
       "matchUpdateTypes": ["patch", "minor", "digest", "pin", "pinDigest"],
       "automerge": true
     },
@@ -62,7 +62,7 @@
       "automerge": false
     },
     {
-      "description": "A digest update from a trusted publisher is a rebuild of a tag already accepted, mostly base-package security fixes; it merges on green ci-ok like any digest instead of waiting for a human. A new tag from them still waits.",
+      "description": "A digest update from a trusted publisher is a rebuild of a tag already accepted, mostly base-package security fixes; it merges on green required checks like any digest instead of waiting for a human. A new tag from them still waits.",
       "matchDatasources": ["docker"],
       "matchUpdateTypes": ["digest", "pinDigest"],
       "matchPackageNames": [
@@ -81,7 +81,7 @@
       "automerge": true
     },
     {
-      "description": "Our own images: no release age to wait out, so no renovate/stability-days status either. With CI on the PR only, the branch then has no status at all, and not-pending would hold the PR for prNotPendingHours, restarted by every new release; open it at once and let ci-ok gate the merge.",
+      "description": "Our own images: no release age to wait out, so no renovate/stability-days status either. With CI on the PR only, the branch then has no status at all, and not-pending would hold the PR for prNotPendingHours, restarted by every new release; open it at once and let the required checks gate the merge.",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["ghcr.io/janwelker/**", "ghcr.io/somuch-cloud/**"],
       "minimumReleaseAge": null,
